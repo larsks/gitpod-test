@@ -33,11 +33,9 @@ COPY . ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set some variables and create gitpod user.
-ENV PGWORKSPACE="/workspace/.pgsql"
-ENV PGDATA="$PGWORKSPACE/data"
-RUN sudo mkdir -p $PGDATA
+ENV PGDATA="/pgdata"
 RUN useradd -l -u 33333 -G sudo -md /home/gitpod -s /bin/bash -p gitpod gitpod
-RUN sudo chown gitpod $PGWORKSPACE -R
+RUN install -d -m 700 -o gitpod -g gitpod  $PGDATA
 
 # Declare Django env variables.
 ENV DJANGO_DEBUG=True
@@ -64,11 +62,11 @@ USER gitpod
 
 # Set some more variables and init the db.
 ENV PATH="/usr/lib/postgresql/14/bin:$PATH"
-RUN mkdir -p ~/.pg_ctl/bin ~/.pg_ctl/sockets
 RUN initdb -D $PGDATA
-RUN printf '#!/bin/bash\npg_ctl -D $PGDATA -l ~/.pg_ctl/log -o "-k ~/.pg_ctl/sockets" start\n' > ~/.pg_ctl/bin/pg_start
-RUN printf '#!/bin/bash\npg_ctl -D $PGDATA -l ~/.pg_ctl/log -o "-k ~/.pg_ctl/sockets" stop\n' > ~/.pg_ctl/bin/pg_stop
-RUN chmod +x ~/.pg_ctl/bin/*
-ENV PATH="$HOME/.pg_ctl/bin:$PATH"
 ENV DATABASE_URL="postgresql://gitpod@localhost"
 ENV PGHOSTADDR="127.0.0.1"
+
+RUN mkdir -p ~/.pg_ctl/bin ~/.pg_ctl/sockets && \
+	printf '#!/bin/bash\npg_ctl -D $PGDATA -l ~/.pg_ctl/log -o "-k ~/.pg_ctl/sockets" start\n' > ~/.pg_ctl/bin/pg_start && \
+	printf '#!/bin/bash\npg_ctl -D $PGDATA -l ~/.pg_ctl/log -o "-k ~/.pg_ctl/sockets" stop\n' > ~/.pg_ctl/bin/pg_stop && \
+	chmod 755 ~/.pg_ctl/bin/*
